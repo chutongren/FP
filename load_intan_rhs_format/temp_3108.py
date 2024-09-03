@@ -10,11 +10,11 @@ from scipy.signal import find_peaks, butter, freqs, filtfilt
 from scipy.signal import cheb2ord, cheby2
 from scipy.fft import fft, fftfreq
 
-# 设置NumPy的打印选项，不省略任何值
-# np.set_printoptions(threshold=np.inf)
+# Intan python rhs read file: https://intantech.com/downloads.html?tabSelect=Software&yPos=123
 
-# from matplotlib import ticker
-# report, header, data, filter
+# Modularity
+# intanutil/report, header, data, filter module
+
 # REPORT FUNCTION
 def read_qstring(fid):
     """Reads Qt style QString.
@@ -1122,10 +1122,11 @@ def cheby2_highpass_filter(data, fs, wp, ws, gpass=3, gstop=40, rs=60, btype='hi
 
 
 # 1. General Figure Plotting
-def plot_filtered_data(filtered_data, num_channels):
+# P: y轴刻度标签有点打架，fontsize 不起作用
+def plot_filtered_data(filtered_data, num_channels, dataset_num):
     # Set the colormap for different channels
     # choose color node: jet: too colorful, cividis: dark blur -> yellow, viridis: purple->green->yellow, plasma: pink
-    colors = plt.cm.jet(np.linspace(0, 1, num_channels))
+    # colors = plt.cm.jet(np.linspace(0, 1, num_channels))
     fig, ax = plt.subplots(num_channels, 1, figsize=(15, 2*4), sharex=True)
 
     for i in range(num_channels):
@@ -1138,21 +1139,24 @@ def plot_filtered_data(filtered_data, num_channels):
         # filtered_data_amplified = filtered_data * amplification_factor
         
         # Plot with thinner lines and different colors
-        ax[i].plot(a['t'], data, linewidth=0.5, color=colors[i])
-        # ax[i].set_ylabel('{}'.format(i))
+        ax[i].plot(a['t'], data, linewidth=0.5) # , color=colors[i]
         ax[i].set_ylabel('{}'.format(i), rotation=0, labelpad=20, va='center')
         ax[i].yaxis.set_label_position('right')
-        
+        # ax[i].tick_params(axis='y', labelsize=8)  # 调整y轴刻度标签的字体大小
+    
+    fig.text(0.07, 0.5, 'Voltage (μV)', va='center', rotation='vertical')
+    
     ax[-1].set_xlabel('Time (s)')
+    plt.subplots_adjust(hspace=0) # (hspace=0.8) 增加子图之间的垂直间距
     # Adjust spacing and add a tight layout for better appearance
-    plt.subplots_adjust(hspace=0)  
+    # plt.savefig('../output_figs/fig_general_{}.png'.format(dataset_num), dpi=300, bbox_inches='tight')
     plt.show()
     
     
 # 2. 20s slice Plotting
-def plot_20s(filtered_data, channels_selected):
-    start_time = 130-120 # data recorded start from 120, not from 0
-    end_time = 150-120
+def plot_20s(filtered_data, channels_selected, fs, dataset_num):
+    start_time = 159-120 # data recorded start from 120, not from 0
+    end_time = 179-120   # 159,179
     start_idx = int(start_time * fs)
     end_idx = int(end_time * fs)
     # print(f"Expected t length: {end_idx - start_idx}")
@@ -1163,13 +1167,14 @@ def plot_20s(filtered_data, channels_selected):
         data = filtered_data[i, :]
         # filtered_data = butter_bandpass_filter(data, fs, lowcut=lowcut, highcut=highcut)
         t = np.linspace(0, 20, end_idx - start_idx) 
-        plt.figure(figsize=(10, 5))
+        plt.figure(figsize=(12, 7))
         plt.plot(t, data[start_idx:end_idx], linewidth=0.5) 
         plt.xlabel('Time (ms)')
         plt.ylabel('Voltage (μV)')
+        plt.xticks(range(0, 21, 2))  # 刻度范围从 0 到 20，每 2 个单位一个刻度
         # plt.ylim(-150, 150)
-        plt.title('An arbitrary 20 seconds plot in channel {}'.format(i))
-        plt.savefig('figs/20s_channel{}.png'.format(i), dpi=300, bbox_inches='tight')
+        # plt.title('An arbitrary 20 seconds plot in data{} channel {}'.format(i))
+        plt.savefig('../output_figs/fig_20s_data{}_channel{}.png'.format(dataset_num, i), dpi=300, bbox_inches='tight')
         plt.show()
     return data[start_idx:end_idx]
 
@@ -1181,23 +1186,22 @@ def find_peaks_in_data(data, peak_height=150):
 
     Parameters:
     data: np.array, data for a single channel
-    fs: int, sampling rate
-    lowcut, highcut: int, frequency range for bandpass filtering
     peak_height: float, threshold for peak detection
 
     Returns:
     peaks: list, indices of detected peaks
     """
     
-    inverted_data = -data
+    inverted_data = -data # for finding the lowest point, not the highest point 
     peaks, _ = find_peaks(inverted_data, height=peak_height)
     
     return peaks
 
 def plot_single_peak(filtered_data, peak_index, fs, channel_num):
-    pre_peak_samples = int(0.002 * fs)  # 左侧1ms的样本数 60
-    post_peak_samples = int(0.002 * fs) # 右侧1ms的样本数
-
+    pre_peak_samples = int(0.001 * fs)  # Number of samples per 1ms on the left  60
+    post_peak_samples = int(0.001 * fs) # Number of samples per 1ms on the right
+    # why 1ms? the AP process, 2ms is too much
+    
     if peak_index - pre_peak_samples >= 0 and peak_index + post_peak_samples < len(filtered_data):
         spike_segment = filtered_data[peak_index - pre_peak_samples : peak_index + post_peak_samples]
         
@@ -1214,14 +1218,14 @@ def plot_single_peak(filtered_data, peak_index, fs, channel_num):
     else:
         print(f'Peak index {peak_index} is out of range for the given data.')
 
-def plot_peaks_selected(filtered_data, spikes_selected, fs, channel_num):
-    pre_peak_samples = int(0.001 * fs)  # 左侧1ms的样本数
-    post_peak_samples = int(0.001 * fs) # 右侧1ms的样本数
+def plot_peaks_selected(filtered_data, fs, spikes_selected, channel_num, dataset_num):
+    pre_peak_samples = int(0.001 * fs) 
+    post_peak_samples = int(0.001 * fs) 
     
     num_peaks = len(spikes_selected)
     colors = plt.cm.jet(np.linspace(0, 1, num_peaks))  # 生成与峰值数量相同的颜色
     
-    plt.figure()
+    plt.figure(figsize=(8, 5))
     
     for i, peak_index in enumerate(spikes_selected):
         if peak_index - pre_peak_samples >= 0 and peak_index + post_peak_samples < len(filtered_data):
@@ -1233,102 +1237,14 @@ def plot_peaks_selected(filtered_data, spikes_selected, fs, channel_num):
         else:
             print(f'Peak index {peak_index} is out of range for the given data.')
 
-    plt.title('ERP for Channel {}'.format(channel_num))
+    # plt.title('ERP for Channel {}'.format(channel_num))
     plt.xlabel('Time (ms)')
     plt.ylabel('Voltage (μV)')
-    plt.grid(True)
-    plt.savefig('figs/plot_peaks_channel{}.png'.format(channel_num[0]), dpi=300, bbox_inches='tight')
-    # plt.legend(loc='upper right')
+    plt.xticks(np.arange(0, 2.2, 0.2))     # plt.xticks(range(0, 2.2, 0.2)) TypeError: 'float' object cannot be interpreted as an integer
+    # plt.grid(True)
+    plt.savefig('../output_figs/erp_data{}_channel{}.png'.format(dataset_num, channel_num[0]), dpi=300, bbox_inches='tight')
+    plt.legend(loc='upper right')
     plt.show()
-
-# def plot_erp(a, fs, lowcut=300, highcut=3000, peak_height=180, channels_selected=[8]):
-#     """
-#     绘制选定通道的ERP，显示离100µV最近的10个最低峰附近的信号段
-
-#     参数:
-#     a: 数据字典，包含 'amplifier_data' 键
-#     fs: int, 采样率
-#     lowcut, highcut: int, 带通滤波的频率范围
-#     peak_height: float, 峰值检测的阈值
-#     channels_selected: list, 要处理的通道列表
-#     """
-    
-#     # 遍历所选通道并处理每个通道的数据
-#     for i in channels_selected:
-#         data = a['amplifier_data'][i, :]
-        
-#         # 进行带通滤波
-#         filtered_data = butter_bandpass_filter(data, fs, lowcut=lowcut, highcut=highcut)
-        
-#         # 使用 find_peaks 找出所有的spike (inverted_data即为信号取反)
-#         inverted_data = -filtered_data
-#         peaks, _ = find_peaks(inverted_data, height=peak_height)
-        
-#         # 每个spike左右各提取3ms的数据
-#         pre_peak_samples = int(0.001 * fs)  # 左侧3ms的样本数
-#         post_peak_samples = int(0.001 * fs) # 右侧3ms的样本数
-        
-#         # 存储所有spike的波形和与100µV的距离
-#         all_spikes = []
-#         spike_distances = []
-
-#         for peak in peaks:
-#             if peak - pre_peak_samples >= 0 and peak + post_peak_samples < len(filtered_data):
-#                 spike_segment = filtered_data[peak - pre_peak_samples : peak + post_peak_samples]
-#                 all_spikes.append(spike_segment)
-                
-#                 # 计算spike中最大值与100µV的距离
-#                 distance_to_100 = np.abs(np.max(spike_segment) - 100)
-#                 spike_distances.append(distance_to_100)
-        
-#         # 选择离100µV最近的10个spike
-#         if len(all_spikes) > 0:
-#             selected_indices = np.argsort(spike_distances)[:10]  # 取最小距离的10个索引
-#             selected_spikes = np.array(all_spikes)[selected_indices]
-            
-#             # 设置x轴的时间刻度
-#             time_axis = np.linspace(-pre_peak_samples, post_peak_samples, pre_peak_samples + post_peak_samples) / fs * 1000
-            
-#             plt.figure(figsize=(10, 6))
-            
-            # 逐个绘制所有的spike片段，颜色不同
-        #     for j, spike in enumerate(selected_spikes):
-        #         plt.plot(time_axis, spike, label=f'Spike {j + 1}')
-            
-        #     plt.title(f'ERP Plot for Channel {i}')
-        #     plt.xlabel('Time (ms)')
-        #     plt.ylabel('Amplitude')
-        #     # plt.ylim(-150,150)
-        #     plt.grid(True)
-        #     plt.legend(loc='upper right')
-        #     plt.show()
-        # else:
-        #     print(f'No spikes found for Channel {i}.')
-        
-
-
-def find_nearest_peak(time_point, fs, peaks):
-    """
-    找到离指定时间点最近的峰值索引
-    
-    参数:
-    time_point: float, 指定的时间点 (单位: 秒)
-    fs: int, 采样率
-    peaks: list, find_peaks 返回的峰值索引
-    
-    返回:
-    int, 最近的峰值索引
-    """
-    # 将时间转换为样本点
-    sample_point = int(time_point * fs)
-    
-    # 计算所有peak与指定时间点之间的差值
-    differences = np.abs(peaks - sample_point)
-    
-    # 找到最小差值的索引
-    nearest_index = np.argmin(differences)
-    print('nearest_index:{}'.format(nearest_index))
-    return peaks[nearest_index]
 
 
 # FFT
@@ -1368,7 +1284,7 @@ def plot_fft_combined(data, fs):
     plt.show()
 
     
-# read_data + main  
+# load_intan_rhs_format.py: read_data + main  
 def read_data(filename):
     """Reads Intan Technologies RHS2000 data file generated by acquisition
     software (IntanRHX, or legacy Stimulation/Recording Controller software).
@@ -1424,27 +1340,43 @@ def read_data(filename):
 if __name__ == '__main__':
     # a: original data; filtered_data: processed after butter filter;
     a = read_data(sys.argv[1])
-    print(a.keys())
+    # print(a.keys())
     # ['stim_data', 'amp_settle_data', 'amplifier_data', 'spike_triggers', 
     # 'notes', 'frequency_parameters', 'stim_parameters', 'charge_recovery_data',
     # 'amplifier_channels', 'compliance_limit_data', 'reference_channel', 't'] 
+    
+    dataset_num = 3 # four datasets in total
     fs = 30000
-    num_channels = a['amplifier_data'].shape[0]
-    filtered_data = butter_bandpass_filter(a['amplifier_data'], num_channels=num_channels)  # 假设 data 是你的输入信号
+    num_channels = a['amplifier_data'].shape[0] # 14(also 2 reference channels)
+    filtered_data = butter_bandpass_filter(a['amplifier_data'], num_channels=num_channels)  
 
     # 1. general figure
-    # plot_filtered_data(filtered_data, num_channels=num_channels)
+    # plot_filtered_data(filtered_data, num_channels=num_channels, dataset_num=dataset_num)
     
-    # 2. 20s
-    channel_selected = [8] # [0,1,4,5,6,7,8]
-    data_selected20 = plot_20s(filtered_data, channel_selected)
+    # 2. 20s figure
+    channel_selected = [10] # [0,1,4,5,6,7,8,10]  manual input
+    data_selected20 = plot_20s(filtered_data, channel_selected, fs, dataset_num=dataset_num)
+    # good performance:4,8
     
-    # Step two must be run when you want to take step three
-    # 3. ERP
-    peaks = find_peaks_in_data(data_selected20, peak_height=100)
-    print(peaks)
+    # Step two must be run before go through step three
+    # 3. ERP figure
+    peaks = find_peaks_in_data(data_selected20, peak_height=11) # ‘peak_height’ requires manual input
+    print(peaks) # print index of peaks 
     
-    plot_single_peak(data_selected20, peak_index=248652, fs=30000, channel_num=channel_selected)
-    spikes_selected = [13790,111658,248652,260221,262473,337735,351150,362476,435487,437645,584548]  # 你手动选择的spikes索引
-    plot_peaks_selected(data_selected20, spikes_selected=spikes_selected, fs=30000, channel_num=channel_selected)
+    plot_single_peak(data_selected20, peak_index=9910, fs=30000, channel_num=channel_selected) # ‘peak_index’ requires manual input
+    
+    # spikes_selected = [26994, 33376, 70878, 90690, 129801, 298983, 405590, 436397, 448779, 481932, 492909, 499529, 589276, 594441] 
+    plot_peaks_selected(data_selected20, fs, spikes_selected=peaks, channel_num=channel_selected, dataset_num=dataset_num)
+    
     # nearest_peak_index = find_nearest_peak(8.7488, fs, peaks)
+    
+    # 可以写个函数，删掉index=的spike
+    # best:7,8; great:1,6
+    # channel 0: height=83, [ 11954  63105 146540 181521 293516 329055 453106 501465 542663]
+    # channel 1: height=30/70 the difference of spikes is huge. lot/four
+    # channel 4: height=24, [ 12350  33284  33303  47579  84450 280872 469643 481571 515349]
+    # channel 5: height= 52，[12347, 26994, 28119, 33376, 47239, 55121, 70878, 90690, 129801, 168979, 192643, 224739, 298983, 405590, 436397, 448779, 481932, 499529, 530314, 589276, 591209, 594441]
+    # channel 6: height=52, [26994, 33376, 70878, 90690, 129801, 298983, 405590, 436397, 448779, 481932, 492909, 499529, 589276, 594441] 
+    # channel 7: height=95, peaks
+    # channel 8: height=75, spikes_selected = [64878,134439, 184672, 251464, 351856, 410548, 428440, 475676, 485559, 594423] #删了三个不好的spikes
+    # channel 10: height=11, peaks
