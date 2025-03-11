@@ -1084,69 +1084,6 @@ def calculate_iir(i, signal_in, signal_out, iir_parameters):
 
 # FOLLOWING FUNCTIONS WRITTEN BY OURSELVES
 # FILTER(Butter)  （1）1000-3000（2）300-5000
-# def butter_bandpass_filter(data, num_channels, mode, fs=30000):
-#     if mode == 1:
-#         lowcut=1000
-#         highcut=3000
-#     elif mode == 2:
-#         lowcut=300
-#         highcut=5000
-#     else:
-#         print("No valid filter mode.")
-        
-#     nyquist = 0.5 * fs  # Nyquist frequency
-#     low = lowcut / nyquist
-#     high = highcut / nyquist
-    
-#     # Initialize the array to hold the filtered data
-#     filtered_data = np.zeros_like(data)
-    
-#     # Generate the filter coefficients only once
-#     b, a = butter(N=2, Wn=[low, high], btype='band')
-
-#     # Apply the filter to each channel
-#     for i in range(num_channels):
-#         data_single_channel = data[i] # not data[i,:], IndexError: too many indices for array: array is 1-dimensional, but 2 were indexed
-#         filtered_data[i] = filtfilt(b, a, data_single_channel)
-    
-#     return filtered_data
-
-# import numpy as np
-# from scipy.signal import iirnotch, filtfilt
-
-# def notch_filter_revised(data, num_channels, fs=30000):
-#     """
-#     Apply notch filters to remove 50Hz and its harmonics below 2000Hz from multi-channel data.
-
-#     Parameters:
-#     - data: ndarray, shape (num_channels, n_samples)
-#         Multi-channel signal data.
-#     - num_channels: int
-#         Number of channels in the data.
-#     - fs: int, optional, default=30000
-#         Sampling frequency in Hz.
-
-#     Returns:
-#     - filtered_data: ndarray, shape (num_channels, n_samples)
-#         Filtered multi-channel signal data.
-#     """
-#     harmonics = [f for f in range(50, 2001, 50)]  # Frequencies to notch out
-#     filtered_data = np.copy(data)
-
-#     for harmonic in harmonics:
-#         # Design notch filter for the given harmonic with ±7Hz range
-#         f0 = harmonic  # Target frequency to remove
-#         BW = 14  # Total bandwidth (7Hz above and below the center frequency)
-#         Q = f0 / BW  # Quality factor for the notch filter
-#         b, a = iirnotch(w0=f0 / (fs / 2), Q=Q)
-
-#         # Apply the notch filter to each channel
-#         for i in range(num_channels):
-#             data_single_channel = filtered_data[i]  # Single-channel data
-#             filtered_data[i] = filtfilt(b, a, data_single_channel)
-
-
-#     return filtered_data
 
 
 import numpy as np
@@ -1221,23 +1158,23 @@ def notch_filter_revised(data, num_channels, fs=30000):
 
 
 
-# FILTER(CHEBY2) y轴范围-2～2？
+# FILTER(CHEBY2) 
 def cheby2_lowpass_filter(data, fs, wp, ws, gpass=3, gstop=40, rs=60, btype='lowpass'):
     wp = wp / (fs / 2)
     ws = ws / (fs / 2)
-    N, Wn = cheb2ord(wp, ws, gpass, gstop)  # 计算order和归一化截止频率
+    N, Wn = cheb2ord(wp, ws, gpass, gstop) 
     print(N)
     print(Wn)
-    b, a = cheby2(N, rs, Wn, btype)  # 设计Chebyshev II滤波器
-    data_preprocessed = filtfilt(b, a, data)  # 使用滤波器对数据进行滤波
+    b, a = cheby2(N, rs, Wn, btype) 
+    data_preprocessed = filtfilt(b, a, data)  
     return data_preprocessed
 
 def cheby2_highpass_filter(data, fs, wp, ws, gpass=3, gstop=40, rs=60, btype='highpass'):
     wp = wp / (fs / 2)
     ws = ws / (fs / 2)
-    N, Wn = cheb2ord(wp, ws, gpass, gstop)  # 计算order和归一化截止频率
-    b, a = cheby2(N, rs, Wn, btype)  # 设计Chebyshev II滤波器
-    data_preprocessed = filtfilt(b, a, data)  # 使用滤波器对数据进行滤波
+    N, Wn = cheb2ord(wp, ws, gpass, gstop) 
+    b, a = cheby2(N, rs, Wn, btype) 
+    data_preprocessed = filtfilt(b, a, data) 
     return data_preprocessed
 
 
@@ -1352,59 +1289,6 @@ def plot_single_peak(filtered_data, peak_index, fs, channel_num):
         print(f'Peak index {peak_index} is out of range for the given data.')
 
 
-# def plot_peaks_selected(filtered_data, fs, spikes_selected, channel_num, dataset_num, mode, low_amp_height_1=None, low_amp_height_2=None):
-#     pre_peak_samples = int(0.001 * fs) 
-#     post_peak_samples = int(0.001 * fs) 
-    
-#     num_peaks = len(spikes_selected)
-#     colors = plt.cm.jet(np.linspace(0, 1, num_peaks))  # 生成与峰值数量相同的颜色
-    
-#     plt.figure(figsize=(8, 5))
-    
-#     if mode == 1 or mode == 2:
-#         for i, peak_index in enumerate(spikes_selected):
-#             if peak_index - pre_peak_samples >= 0 and peak_index + post_peak_samples < len(filtered_data):
-#                 spike_segment = filtered_data[peak_index - pre_peak_samples : peak_index + post_peak_samples]
-                
-#                 time_axis = np.linspace(0, pre_peak_samples + post_peak_samples, pre_peak_samples + post_peak_samples) / fs * 1000
-                
-#                 plt.plot(time_axis, spike_segment, color=colors[i], label=f'Peak {i+1}')
-#             else:
-#                 print(f'Peak index {peak_index} is out of range for the given data.')
-
-#         plt.xlabel('Time (ms)')
-#         plt.ylabel('Voltage (μV)')
-#         plt.xticks(np.arange(0, 2.2, 0.2))  # 修正xticks的范围
-    
-#     # 根据mode来保存不同的图像
-#     if mode == 1:
-#         plt.savefig('../output_figs/task1_300-5000Hzfiltered_1409/erp_APtrend_data{}_channel{}.png'.format(dataset_num, channel_num[0]+1), dpi=300, bbox_inches='tight')
-#     elif mode == 2:
-#         plt.savefig('../output_figs/task1_1000-3000Hzfiltered_0709/erp_highamplitude_data{}_channel{}.png'.format(dataset_num, channel_num[0]+1), dpi=300, bbox_inches='tight')
-#     elif mode == 3:
-#         if low_amp_height_1 is None or low_amp_height_2 is None:
-#             raise ValueError("For mode 3, both low_amp_height_1 and low_amp_height_2 must be provided.")
-
-#         # 查找低幅值spikes
-#         peaks1 = find_peaks_in_data(filtered_data, peak_height=low_amp_height_1)  # 查找大于low_amp_height_1的peaks
-#         peaks2 = find_peaks_in_data(filtered_data, peak_height=low_amp_height_2)  # 查找大于low_amp_height_2的peaks
-#         peaks_lowamplitude = np.setdiff1d(peaks1, peaks2)  # 从peaks1中删除peaks2中的峰值
-#         spikes_selected = peaks_lowamplitude # 無所謂，对于mode3情况，自己找出spikes_selected，覆盖了传入进来的参数
-#         print(f'Low amplitude peaks: {len(spikes_selected)}')  # 打印低幅值spikes的数量
-
-#         time_axis = np.linspace(0, pre_peak_samples + post_peak_samples, pre_peak_samples + post_peak_samples) / fs * 1000
-                
-#         plt.plot(time_axis, spikes_selected, color=colors[i], label=f'Peak {i+1}')
-#         plt.xlabel('Time (ms)')
-#         plt.ylabel('Voltage (μV)')
-#         plt.xticks(np.arange(0, 2.2, 0.2))  # 修正xticks的范围
-        
-#         # 保存低幅值spikes的图像
-#         # plt.savefig('../output_figs/task1_1000-3000Hzfiltered_0709/erp_lowamplitude_data{}_channel{}.png'.format(dataset_num, channel_num[0]+1), dpi=300, bbox_inches='tight')
-    
-#     # plt.legend(loc='upper right')
-#     plt.show()
-
 def plot_peaks_selected(filtered_data, fs, spikes_selected, channel_num, dataset_num, mode, low_amp_height_1=None, low_amp_height_2=None):
     if mode == 3: # caculate again
         if low_amp_height_1 is None or low_amp_height_2 is None:
@@ -1439,9 +1323,8 @@ def plot_peaks_selected(filtered_data, fs, spikes_selected, channel_num, dataset
 
     plt.xlabel('Time (ms)')
     plt.ylabel('Voltage (μV)')
-    plt.xticks(np.arange(0, 2.2, 0.2))  # 修正xticks的范围
+    plt.xticks(np.arange(0, 2.2, 0.2)) 
     
-    # # 根据mode来保存不同的图像
     # if mode == 1:
     #     plt.savefig('../output_figs/task1_300-5000Hzfiltered_1409/erp_APtrend_data{}_channel{}.png'.format(dataset_num, channel_num[0]+1), dpi=300, bbox_inches='tight')
     # elif mode == 2:
@@ -1449,7 +1332,6 @@ def plot_peaks_selected(filtered_data, fs, spikes_selected, channel_num, dataset
     # elif mode == 3:
     #     if low_amp_height_1 is None or low_amp_height_2 is None:
     #         raise ValueError("For mode 3, both low_amp_height_1 and low_amp_height_2 must be provided.")
-    #     # 保存低幅值spikes的图像
     #     # plt.savefig('../output_figs/task1_1000-3000Hzfiltered_0709/erp_lowamplitude_data{}_channel{}.png'.format(dataset_num, channel_num[0]+1), dpi=300, bbox_inches='tight')
     
     # plt.legend(loc='upper right')
@@ -1460,484 +1342,23 @@ def delete_spikes(spikes_selected, spikes_selected_deleted_index):
     return np.delete(spikes_selected, spikes_selected_deleted_index)
 
 
-
-# def find_peaks_by_height(data, peak_height, offset=0.2):
-#     """
-#     找出具有接近相同幅值的peaks
-    
-#     Parameters:
-#     data: np.array, 神经数据
-#     peak_height: float, 目标峰值
-#     offset: float, 峰值容差范围，默认0.2mV
-    
-#     Returns:
-#     peaks: list, 对应幅值范围内的峰值索引
-#     """
-#     peaks, properties = find_peaks(data, height=(peak_height - offset, peak_height + offset))
-#     return peaks
-
-# def plot_neuron_index(filtered_data, fs, spikes_selected, neuron_index):
-#     """
-#     绘制指定神经元索引的所有spikes
-    
-#     Parameters:
-#     filtered_data: np.array, 过滤后的数据
-#     fs: float, 采样频率
-#     spikes_selected: list, 所选spikes的索引
-#     neuron_index: int, 神经元索引
-#     """
-#     pre_peak_samples = int(0.001 * fs)  # 左边1ms的样本数量
-#     post_peak_samples = int(0.001 * fs) # 右边1ms的样本数量
-    
-#     plt.figure(figsize=(8, 5))
-    
-#     for peak_index in spikes_selected:
-#         if peak_index - pre_peak_samples >= 0 and peak_index + post_peak_samples < len(filtered_data):
-#             spike_segment = filtered_data[peak_index - pre_peak_samples : peak_index + post_peak_samples]
-#             time_axis = np.linspace(0, pre_peak_samples + post_peak_samples, pre_peak_samples + post_peak_samples) / fs * 1000
-#             plt.plot(time_axis, spike_segment, color='blue', alpha=0.5)
-    
-#     plt.title(f'Neuron {neuron_index} AP spikes')
-#     plt.xlabel('Time (ms)')
-#     plt.ylabel('Voltage (μV)')
-#     plt.grid(True)
-#     plt.show()
-     
-# def find_and_plot_top_neurons(filtered_data, fs, num_neurons=5, min_spikes=3, offset=0.2, channel_index=0):
-#     """
-#     找出前五个幅值最大的神经元，并绘制它们的spikes
-
-#     Parameters:
-#     filtered_data: np.array, 过滤后的神经数据（二维数组：通道 x 时间）
-#     fs: float, 采样频率
-#     num_neurons: int, 绘制的最大神经元数量，默认5
-#     min_spikes: int, 神经元最少包含的spikes数量，默认3
-#     offset: float, 查找spikes时的容差范围，默认0.2mV
-#     channel_index: int, 选择用于分析的通道索引，默认0
-#     """
-#     # 检查 filtered_data 是二维数组
-#     if filtered_data.ndim != 2:
-#         raise ValueError('`filtered_data` must be a 2-D array (channels x time).')
-
-#     # 选择指定通道的数据
-#     channel_data = filtered_data[channel_index, :]
-    
-#     # # 找到所有spikes，并按照幅值从大到小排序
-#     # peaks, properties = find_peaks(channel_data)
-#     # peak_heights = properties['peak_heights']
-#     # sorted_indices = np.argsort(peak_heights)[::-1]  # 按幅值降序排列
-
-#     # neuron_count = 0  # 已处理的神经元数量
-    
-#     # 寻找峰值，并指定 height 参数
-#     peaks, properties = find_peaks(filtered_data, height=0.5)  # 调整 height 值，根据数据的实际情况
-#     if 'peak_heights' not in properties:
-#         print("No peak heights found, please check the height threshold.")
-#         return
-    
-#     peak_heights = properties['peak_heights']
-    
-#     for i in sorted_indices:
-#         if neuron_count >= num_neurons:
-#             break
-        
-#         peak_height = peak_heights[i]
-#         spikes_selected = find_peaks_by_height(channel_data, peak_height, offset)
-        
-#         if len(spikes_selected) >= min_spikes:
-#             neuron_count += 1
-#             print(f'Neuron {neuron_count}: Height = {peak_height:.2f}mV, Spikes = {len(spikes_selected)}')
-#             plot_neuron_index(channel_data, fs, spikes_selected, neuron_count)
-
-
-# def find_and_plot_top_neurons(filtered_data, fs, min_spikes=3, plot_window_ms=1):
-#     """
-#     找到前五个 neuron 的活动并绘制图像。每个 neuron 至少有 min_spikes 个峰值。
-    
-#     Parameters:
-#     - filtered_data: 1D numpy array, 滤波后的信号数据
-#     - fs: 采样频率 (Hz)
-#     - min_spikes: 每个 neuron 至少需要的峰值数量 (默认3)
-#     - plot_window_ms: 绘制峰值左右各 plot_window_ms 毫秒的信号
-    
-#     """
-#     # 查找所有峰值，使用默认的 height 参数 (可根据数据调整)
-#     peaks, properties = find_peaks(filtered_data, height=0.5)  # 可以根据数据调整 height
-#     if 'peak_heights' not in properties:
-#         print("没有找到峰值高度，请调整 height 阈值.")
-#         return
-    
-#     peak_heights = properties['peak_heights']
-
-#     # 获取独特的峰值高度，并按降序排序
-#     unique_heights = np.unique(peak_heights)[::-1]
-    
-#     # 存储每个 neuron 的峰值 index 列表
-#     neuron_peaks_dict = {}
-    
-#     # 找到幅值相近的 spikes 并存储
-#     for height in unique_heights:
-#         matching_peaks = peaks[np.isclose(peak_heights, height, atol=0.2)]  # 调整幅值相近的阈值 atol
-#         if len(matching_peaks) >= min_spikes:
-#             neuron_peaks_dict[height] = matching_peaks
-    
-#     # 按照幅值降序选择前五个 neuron
-#     top_five_neurons = list(neuron_peaks_dict.keys())[:5]
-    
-#     print(f"找到前五个 neuron 的峰值: {top_five_neurons}")
-
-#     # 为每个 neuron 绘制图像
-#     pre_peak_samples = int(plot_window_ms * fs / 1000)  # 峰值前的采样点数
-#     post_peak_samples = int(plot_window_ms * fs / 1000)  # 峰值后的采样点数
-    
-#     for neuron_index, height in enumerate(top_five_neurons, start=1):
-#         spikes_selected = neuron_peaks_dict[height]
-        
-#         plt.figure(figsize=(8, 5))
-#         colors = plt.cm.jet(np.linspace(0, 1, len(spikes_selected)))
-        
-#         for i, peak_index in enumerate(spikes_selected):
-#             if peak_index - pre_peak_samples >= 0 and peak_index + post_peak_samples < len(filtered_data):
-#                 spike_segment = filtered_data[peak_index - pre_peak_samples : peak_index + post_peak_samples]
-#                 time_axis = np.linspace(0, pre_peak_samples + post_peak_samples, pre_peak_samples + post_peak_samples) / fs * 1000
-#                 plt.plot(time_axis, spike_segment, color=colors[i], label=f'Peak {i+1}')
-#             else:
-#                 print(f'Peak index {peak_index} 超出数据范围.')
-
-#         plt.title(f'Neuron {neuron_index} (Amplitude: {height:.2f} μV)')
-#         plt.xlabel('Time (ms)')
-#         plt.ylabel('Voltage (μV)')
-#         plt.legend(loc='upper right')
-#         plt.grid(True)
-#         plt.show()
-
-# 示例调用方式:
-# find_and_plot_top_neurons(filtered_data, fs)
-
-
-# （1）
-# def find_and_plot_top_neurons(filtered_data, fs, min_spikes=3, plot_window_ms=1):
-#     """
-#     找到前五个 neuron 的活动并绘制图像。每个 neuron 至少有 min_spikes 个峰值。
-    
-#     Parameters:
-#     - filtered_data: 2D numpy array, 每行是一个通道的信号数据，或者 1D 数组（单通道数据）
-#     - fs: 采样频率 (Hz)
-#     - min_spikes: 每个 neuron 至少需要的峰值数量 (默认3)
-#     - plot_window_ms: 绘制峰值左右各 plot_window_ms 毫秒的信号
-    
-#     """
-#     # 如果数据是2D的，那么就逐个通道处理
-#     if filtered_data.ndim == 2:
-#         num_channels = filtered_data.shape[0]
-#         for channel in range(num_channels):
-#             print(f"正在处理第 {channel+1} 个通道的数据...")
-#             single_channel_data = filtered_data[channel, :]
-#             process_single_channel(single_channel_data, fs, min_spikes, plot_window_ms, channel)
-#     elif filtered_data.ndim == 1:
-#         # 如果是1D数组，直接处理
-#         process_single_channel(filtered_data, fs, min_spikes, plot_window_ms)
-#     else:
-#         raise ValueError("`filtered_data` 必须是 1D 或 2D numpy array.")
-
-# （2）
-# def find_and_plot_top_neurons_by_channel(filtered_data, fs, channel_index=7, offset=0.5, top_n=5):
-#     """
-#     Find and plot top N neurons based on spike amplitude and number of occurrences for a specified channel.
-    
-#     Parameters:
-#     filtered_data: numpy array, shape (n_channels, n_samples)
-#         The filtered neural data.
-#     fs: int
-#         Sampling frequency.
-#     channel_index: int
-#         Index of the channel to analyze.
-#     offset: float
-#         The range around each spike amplitude to group spikes (e.g., offset=0.5 groups spikes within ±0.5 amplitude).
-#     top_n: int
-#         Number of top neurons (based on spike count) to plot.
-#     """
-    
-#     # Extract the data for the specified channel
-#     channel_data = filtered_data[channel_index]
-
-#     # Find peaks in the channel data
-#     peaks, properties = find_peaks(channel_data, height=0.5)  # Adjust height if needed
-
-#     # Get the peak amplitudes (heights)
-#     peak_heights = properties['peak_heights']
-
-#     # Group peaks by amplitude, with the given offset
-#     amplitude_bins = np.arange(np.min(peak_heights), np.max(peak_heights) + offset, offset)
-#     spike_counts, bin_edges = np.histogram(peak_heights, bins=amplitude_bins)
-
-#     # Get the indices of the top N spike groups
-#     top_spike_groups = np.argsort(spike_counts)[-top_n:]
-
-#     # Plot the top N spike groups
-#     for i, group_index in enumerate(top_spike_groups):
-#         group_min = bin_edges[group_index]
-#         group_max = bin_edges[group_index + 1]
-
-#         # Find spikes that belong to this amplitude group
-#         spikes_in_group = peaks[(peak_heights >= group_min) & (peak_heights < group_max)]
-
-#         if len(spikes_in_group) > 0:
-#             print(f"Neuron {i+1}: {len(spikes_in_group)} spikes, amplitude range: {group_min:.2f} to {group_max:.2f}")
-#             plot_peaks_selected(channel_data, fs, spikes_in_group, [channel_index], dataset_num=1, mode=1)
-#         else:
-#             print(f"Neuron {i+1}: No spikes in this amplitude range.")
-
-# （2）modified
-# def find_and_plot_top_neurons_by_channel(filtered_data, fs, channel_index=7, offset=0.5, top_n=5, peak_height=50):
-#     """
-#     Find and plot top N neurons based on spike amplitude and number of occurrences for a specified channel.
-    
-#     Parameters:
-#     filtered_data: numpy array, shape (n_channels, n_samples)
-#         The filtered neural data.
-#     fs: int
-#         Sampling frequency.
-#     channel_index: int
-#         Index of the channel to analyze.
-#     offset: float
-#         The range around each spike amplitude to group spikes (e.g., offset=0.5 groups spikes within ±0.5 amplitude).
-#     top_n: int
-#         Number of top neurons (based on spike count) to plot.
-#     peak_height: float
-#         Threshold for detecting action potentials (APs).
-#     """
-    
-#     # Extract the data for the specified channel
-#     channel_data = filtered_data[channel_index]
-
-#     # Find the lowest peaks in the channel data (AP detection)
-#     spikes_selected = find_peaks_in_data(channel_data, peak_height=peak_height)
-
-#     # Get the peak amplitudes (heights) of the inverted data (positive peaks in the original signal)
-#     peak_heights = -channel_data[spikes_selected]  # Inverted to reflect positive AP amplitudes
-
-#     # Group peaks by amplitude, with the given offset
-#     amplitude_bins = np.arange(np.min(peak_heights), np.max(peak_heights) + offset, offset)
-#     spike_counts, bin_edges = np.histogram(peak_heights, bins=amplitude_bins)
-
-#     # Get the indices of the top N spike groups
-#     top_spike_groups = np.argsort(spike_counts)[-top_n:]
-
-#     # Plot the top N spike groups
-#     for i, group_index in enumerate(top_spike_groups):
-#         group_min = bin_edges[group_index]
-#         group_max = bin_edges[group_index + 1]
-
-#         # Find spikes that belong to this amplitude group
-#         spikes_in_group = spikes_selected[(peak_heights >= group_min) & (peak_heights < group_max)]
-
-#         if len(spikes_in_group) > 0:
-#             print(f"Neuron {i+1}: {len(spikes_in_group)} spikes, amplitude range: {group_min:.2f} to {group_max:.2f}")
-#             plot_peaks_selected(channel_data, fs, spikes_in_group, [channel_index], dataset_num=1, mode=1)
-#         else:
-#             print(f"Neuron {i+1}: No spikes in this amplitude range.")
-
-# def find_peaks_in_data(data, peak_height=50):
-#     """
-#     Find action potentials (APs) by detecting the lowest peaks in the data for a specified channel.
-    
-#     Parameters:
-#     data: np.array, data for a single channel.
-#     peak_height: float, threshold for peak detection (inverted, so negative values).
-    
-#     Returns:
-#     peaks: list, indices of detected peaks.
-#     """
-#     inverted_data = -data  # Invert the data to find the lowest points (APs)
-#     peaks, _ = find_peaks(inverted_data, height=peak_height)  # Detect peaks with height greater than the threshold
-#     return peaks
-
-
-# def process_single_channel(channel_data, fs, min_spikes, plot_window_ms, channel_index=None):
-#     """
-#     处理单个通道的数据，找到峰值并绘制图像。
-    
-#     Parameters:
-#     - channel_data: 1D numpy array, 单个通道的信号数据
-#     - fs: 采样频率 (Hz)
-#     - min_spikes: 每个 neuron 至少需要的峰值数量
-#     - plot_window_ms: 绘制峰值左右各 plot_window_ms 毫秒的信号
-#     - channel_index: 通道的索引号 (可选，用于打印或显示)
-#     """
-#     # 查找所有峰值，使用默认的 height 参数 (可根据数据调整)
-#     peaks, properties = find_peaks(channel_data, height=0.5)  # 可以根据数据调整 height
-#     if 'peak_heights' not in properties:
-#         print("没有找到峰值高度，请调整 height 阈值.")
-#         return
-    
-#     peak_heights = properties['peak_heights']
-
-#     # 获取独特的峰值高度，并按降序排序
-#     unique_heights = np.unique(peak_heights)[::-1]
-    
-#     # 存储每个 neuron 的峰值 index 列表
-#     neuron_peaks_dict = {}
-    
-#     # 找到幅值相近的 spikes 并存储
-#     for height in unique_heights:
-#         matching_peaks = peaks[np.isclose(peak_heights, height, atol=0.2)]  # 调整幅值相近的阈值 atol
-#         if len(matching_peaks) >= min_spikes:
-#             neuron_peaks_dict[height] = matching_peaks
-    
-#     # 按照幅值降序选择前五个 neuron
-#     top_five_neurons = list(neuron_peaks_dict.keys())[:5]
-    
-#     print(f"找到前五个 neuron 的峰值: {top_five_neurons}")
-
-#     # 为每个 neuron 绘制图像
-#     pre_peak_samples = int(plot_window_ms * fs / 1000)  # 峰值前的采样点数
-#     post_peak_samples = int(plot_window_ms * fs / 1000)  # 峰值后的采样点数
-    
-#     for neuron_index, height in enumerate(top_five_neurons, start=1):
-#         spikes_selected = neuron_peaks_dict[height]
-        
-#         plt.figure(figsize=(8, 5))
-#         colors = plt.cm.jet(np.linspace(0, 1, len(spikes_selected)))
-        
-#         for i, peak_index in enumerate(spikes_selected):
-#             if peak_index - pre_peak_samples >= 0 and peak_index + post_peak_samples < len(channel_data):
-#                 spike_segment = channel_data[peak_index - pre_peak_samples : peak_index + post_peak_samples]
-#                 time_axis = np.linspace(0, pre_peak_samples + post_peak_samples, pre_peak_samples + post_peak_samples) / fs * 1000
-#                 plt.plot(time_axis, spike_segment, color=colors[i], label=f'Peak {i+1}')
-#             else:
-#                 print(f'Peak index {peak_index} 超出数据范围.')
-
-#         title = f'Neuron {neuron_index} (Amplitude: {height:.2f} μV)'
-#         if channel_index is not None:
-#             title += f' (Channel {channel_index+1})'
-#         plt.title(title)
-#         plt.xlabel('Time (ms)')
-#         plt.ylabel('Voltage (μV)')
-#         plt.legend(loc='upper right')
-#         plt.grid(True)
-#         plt.show()
-
-
-# (3) adjust
-# def find_and_plot_top_neurons_by_channel(filtered_data, fs, channel_index=7, offset=1, top_n=5, peak_height=50):
-#     """
-#     Find and plot top N neurons based on spike amplitude and number of occurrences for a specified channel.
-    
-#     Parameters:
-#     filtered_data: numpy array, shape (n_channels, n_samples)
-#         The filtered neural data.
-#     fs: int
-#         Sampling frequency.
-#     channel_index: int
-#         Index of the channel to analyze.
-#     offset: float
-#         The range around each spike amplitude to group spikes (e.g., offset=1 groups spikes within ±1 amplitude).
-#     top_n: int
-#         Number of top neurons (based on spike count) to plot.
-#     peak_height: float
-#         Threshold for detecting action potentials (APs).
-#     """
-    
-#     # Extract the data for the specified channel
-#     channel_data = filtered_data[channel_index]
-
-#     # Find the lowest peaks in the channel data (AP detection)
-#     spikes_selected = find_peaks_in_data(channel_data, peak_height=peak_height)
-
-#     # Get the peak amplitudes of the detected spikes
-#     peak_heights = -channel_data[spikes_selected]  # Inverted to reflect positive AP amplitudes
-
-#     # Define the bins for amplitude ranges
-#     print(np.max(peak_heights))
-#     amplitude_bins = np.arange(50, np.max(peak_heights) + offset, offset)
-#     spike_counts, bin_edges = np.histogram(peak_heights, bins=amplitude_bins)
-
-#     # Get the indices of the top N spike groups based on counts
-#     top_spike_groups = np.argsort(spike_counts)[-top_n:]
-
-#     # Plot the top N spike groups
-#     for i, group_index in enumerate(top_spike_groups):
-#         group_amplitude = bin_edges[group_index]  # Get the amplitude for this group
-
-#         # Find spikes that belong to this amplitude group
-#         spikes_in_group = spikes_selected[(peak_heights >= bin_edges[group_index]) & (peak_heights < bin_edges[group_index + 1])]
-
-#         if len(spikes_in_group) > 0:
-#             print(f"Neuron {i+1}: {len(spikes_in_group)} spikes, amplitude range: {bin_edges[group_index]:.2f} to {bin_edges[group_index + 1]:.2f}")
-#             plot_peaks_selected(channel_data, fs, spikes_in_group, [channel_index], dataset_num=1, mode=1)
-#         else:
-#             print(f"Neuron {i+1}: No spikes in this amplitude range.")
-
-
-
-# FFT 最原始版本
-# def plot_fft_combined(data, fs):
-#     """
-#     计算并绘制所有通道数据的FFT频谱的合成图
-
-#     参数:
-#     data: np.array, 原始数据（形状：[通道数, 样本点数]）
-#     fs: int, 采样率
-#     """
-
-#     # 将所有通道的数据合并
-#     # combined_data = data
-#     combined_data = np.mean(data)  # 计算所有通道数据的均值（也可以选择其他合并方法）
-
-#     # 获取数据长度
-#     L = len(combined_data)
-    
-#     # 计算信号的FFT
-#     sig_fft = fft(combined_data)
-    
-#     # 计算频率轴
-#     freqs = fftfreq(L, 1/fs)
-    
-#     # 仅保留单边频谱（正频率部分）
-#     L_fft = len(sig_fft)
-#     sig_fft = 2 * np.abs(sig_fft[:L_fft // 2]) / L
-#     freqs = freqs[:L_fft // 2]
-    
-#     # 绘制频谱图
-#     plt.figure()
-#     plt.plot(freqs, sig_fft, color='blue')
-#     # plt.title('Combined FFT Spectrum of All Channels')
-#     plt.xlabel('Frequency (Hz)')
-#     plt.ylabel('Amplitude')
-#     plt.grid(True)
-#     plt.savefig('../output_figs/task1_300-5000Hzfiltered_1409/fft.png', dpi=300, bbox_inches='tight')
-#     plt.show()
-
-# chatgpt帮我改之后
 def plot_fft_combined(data, fs):
-    """
-    计算并绘制所有通道数据的FFT频谱的合成图
 
-    参数:
-    data: np.array, 原始数据（形状：[通道数, 样本点数]）
-    fs: int, 采样率
-    """
     import matplotlib.pyplot as plt
     from scipy.fft import fft, fftfreq
 
-    # 合并所有通道数据（按时间点取均值）
     combined_data = np.mean(data, axis=0)
 
-    # 获取数据长度
     L = len(combined_data)
     
-    # 计算信号的FFT
     sig_fft = fft(combined_data)
     
-    # 计算频率轴
     freqs = fftfreq(L, 1/fs)
     
-    # 仅保留单边频谱（正频率部分）
+
     sig_fft = 2 * np.abs(sig_fft[:L // 2]) / L
     freqs = freqs[:L // 2]
     
-    # 绘制频谱图
     plt.figure()
     plt.plot(freqs, sig_fft, color='blue')
     plt.title('Combined FFT Spectrum of All Channels')
@@ -1945,51 +1366,11 @@ def plot_fft_combined(data, fs):
     plt.ylabel('Amplitude')
     plt.grid(True)
 
-    # 保存图像
     output_path = '../output_figs/task1_300-5000Hzfiltered_1409/fft.png'
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     print(f"FFT plot saved to {output_path}")
     plt.show()
 
-#教授看着改的版本
-# def plot_fft_combined(data, fs):
-#     """
-#     计算并绘制所有通道数据的FFT频谱的合成图
-
-#     参数:
-#     data: np.array, 原始数据（形状：[通道数, 样本点数]）
-#     fs: int, 采样率
-#     """
-
-#     # 将所有通道的数据合并
-#     combined_data = data
-#     # combined_data = np.mean(data)  # 计算所有通道数据的均值（也可以选择其他合并方法）
-
-#     # 获取数据长度
-#     L = len(combined_data)
-    
-#     # 计算信号的FFT
-#     sig_fft = fft(combined_data)
-    
-#     # 计算频率轴
-#     freqs = fftfreq(L, 1/fs)
-    
-#     # 仅保留单边频谱（正频率部分）
-#     L_fft = len(sig_fft)
-#     sig_fft = 2 * np.abs(sig_fft[:L_fft // 2]) / L
-#     freqs = freqs[:L_fft // 2]
-    
-#     # 绘制频谱图
-#     plt.figure()
-#     plt.plot(freqs, sig_fft, color='blue')
-#     # plt.title('Combined FFT Spectrum of All Channels')
-#     plt.xlabel('Frequency (Hz)')
-#     plt.ylabel('Amplitude')
-#     plt.grid(True)
-#     plt.savefig('../output_figs/task1_300-5000Hzfiltered_1409/fft.png', dpi=300, bbox_inches='tight')
-#     plt.show()
-
-    
 # load_intan_rhs_format.py: read_data + main  
 def read_data(filename):
     """Reads Intan Technologies RHS2000 data file generated by acquisition
@@ -2052,7 +1433,7 @@ if __name__ == '__main__':
     # 'amplifier_channels', 'compliance_limit_data', 'reference_channel', 't'] 
     
     # 0. filter 
-    filter_mode = 2 # = 1:1000-3000; = 2: 300-5000   # 不同滤波参数只需要修改这里！
+    filter_mode = 2 # = 1:1000-3000; = 2: 300-5000  
     dataset_num = 3 # four datasets in total
     fs = 30000
 
@@ -2094,7 +1475,6 @@ if __name__ == '__main__':
     # spikes_selected_deleted_index = [7,12,13]
     # spikes_selected = delete_spikes(peaks, spikes_selected_deleted_index)
     # # spikes_selected = [26994, 33376, 70878, 90690, 129801, 298983, 405590, 436397, 448779, 481932, 492909, 499529, 589276, 594441] 
-    # 下面一行
     # plot_peaks_selected(data_selected20, fs, spikes_selected=spikes_selected, channel_num=channel_selected, dataset_num=dataset_num, mode = erp_mode) # mode = 3
     # 94,96     6
     # 
@@ -2117,24 +1497,3 @@ if __name__ == '__main__':
     # spikes_selected2 = delete_spikes(peaks_lowamplitude, spikes_selected_deleted_index)
     # plot_peaks_selected(data_selected20, fs, spikes_selected=spikes_selected2, channel_num=channel_selected, dataset_num=dataset_num, mode = 3)
 
-
-    # 300-5000: APtrend/highamplitude/lowamplitude  50
-    # channel 0: height=115/160/50,60
-    # channel 1: height=/160/50,60
-    # channel 4: height=25/160/50,60
-    # channel 5: height=40/160/50,60
-    # channel 6: height=40/160/50,60
-    # channel 7: height=/160/50,60
-    # channel 8: height=/160/50,60
-    
-    # 可以写个函数，删掉index=的spike
-    # best:7,8; great:1,6
-    # highamplitude/lowamplitude 低幅值的发现：找15-16只间隔1Hz就有140个peaks；会有第二个连续的AP（index=1）；为什么输入的是15，但是纵轴对应的接近40了？（你要看1s的timepoint，因为我们是找最低峰左右个1ms）
-    # channel 0: height=83/40,41 [ 11954  63105 146540 181521 293516 329055 453106 501465 542663]
-    # channel 1: height=30/70/15,16 the difference of spikes is huge. lot/four
-    # channel 4: height=24/13,14, [ 12350  33284  33303  47579  84450 280872 469643 481571 515349]
-    # channel 5: height= 52/30,35[12347, 26994, 28119, 33376, 47239, 55121, 70878, 90690, 129801, 168979, 192643, 224739, 298983, 405590, 436397, 448779, 481932, 499529, 530314, 589276, 591209, 594441]
-    # channel 6: height=52/30,35 [26994, 33376, 70878, 90690, 129801, 298983, 405590, 436397, 448779, 481932, 492909, 499529, 589276, 594441] 
-    # channel 7: height=95/50,51, peaks
-    # channel 8: height=85/50,51, spikes_selected = [64878,134439, 184672, 251464, 351856, 410548, 428440, 475676, 485559, 594423] #删了三个不好的spikes
-    # channel 10: height=11, peaks
